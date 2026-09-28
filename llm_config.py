@@ -1,5 +1,6 @@
 import os
 
+# Fix CrewAI cache breakpoint issue with Groq/OpenAI-compatible providers
 try:
     import crewai.llms.cache as crew_cache
     crew_cache.mark_cache_breakpoint = lambda msg: msg
