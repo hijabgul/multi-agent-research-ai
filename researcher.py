@@ -7,13 +7,11 @@ from web_tool import WebResearchTool
 def create_researcher():
     return Agent(
         role="Web Researcher",
-        goal=(
-            "Search the web and collect important current facts "
-            "and source URLs for the research question."
-        ),
+        goal="Find a few reliable facts and sources for the research question.",
         backstory=(
-            "You are a concise professional web researcher. "
-            "You search reliable sources and return only essential evidence."
+            "You are a concise web researcher. "
+            "Use the web search tool and return short factual findings "
+            "with source URLs."
         ),
         tools=[WebResearchTool()],
         llm=create_llm(temperature=0.1),
