@@ -1,35 +1,21 @@
-import os
+from crewai import Agent
 
-from crewai import Agent, LLM
+from llm_config import create_llm
 
 
 def create_report_writer():
 
-    llm = LLM(
-        model="groq/openai/gpt-oss-120b",
-        api_key=os.environ["GROQ_API_KEY"],
-        temperature=0.3
-    )
+    llm = create_llm(temperature=0.3)
 
-    writer = Agent(
-
+    return Agent(
         role="Research Report Writer",
-
-        goal=(
-            "Create a professional research report "
-            "using the research, analysis and fact checking."
-        ),
-
+        goal="Create a professional evidence-based research report.",
         backstory=(
             "You are an experienced research writer. "
-            "You create clear, structured and evidence-based reports."
+            "You turn verified research into a clear, "
+            "well-structured report."
         ),
-
         llm=llm,
-
         verbose=False,
-
         allow_delegation=False
     )
-
-    return writer
