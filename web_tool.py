@@ -8,7 +8,7 @@ from ddgs import DDGS
 class WebResearchInput(BaseModel):
     query: str = Field(
         ...,
-        description="The exact web search query to search for."
+        description="The exact web search query."
     )
 
 
@@ -16,9 +16,8 @@ class WebResearchTool(BaseTool):
     name: str = "web_research_tool"
 
     description: str = (
-        "Search the internet for current information, facts, "
-        "recent information, and supporting evidence. "
-        "Use exactly one parameter called query."
+        "Search the internet for current information and facts. "
+        "Use one parameter named query."
     )
 
     args_schema: Type[BaseModel] = WebResearchInput
@@ -28,11 +27,9 @@ class WebResearchTool(BaseTool):
         if not query or not query.strip():
             return "No search query was provided."
 
-        query = query.strip()
-
         try:
             results = DDGS().text(
-                query,
+                query.strip(),
                 max_results=3
             )
 
@@ -40,7 +37,7 @@ class WebResearchTool(BaseTool):
             return f"Web search failed: {str(e)}"
 
         if not results:
-            return f"No web results found for: {query}"
+            return "No web results found."
 
         output = []
 
@@ -51,18 +48,10 @@ class WebResearchTool(BaseTool):
             summary = result.get("body", "")[:300]
 
             output.append(
-                f
-SOURCE {number}
-
-Title:
-{title}
-
-URL:
-{url}
-
-Summary:
-{summary}
-.strip()
+                f"SOURCE {number}\n"
+                f"Title: {title}\n"
+                f"URL: {url}\n"
+                f"Summary: {summary}"
             )
 
         return "\n\n".join(output)
