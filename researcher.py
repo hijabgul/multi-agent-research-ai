@@ -6,18 +6,27 @@ from web_tool import WebResearchTool
 
 def create_researcher():
 
-    llm = create_llm(temperature=0.2)
-
     return Agent(
         role="Web Researcher",
-        goal="Find current and reliable information from the web.",
-        backstory=(
-            "You are a professional web researcher. "
-            "You search the web, collect evidence and keep track "
-            "of the sources used."
+
+        goal=(
+            "Find current and reliable information "
+            "from the web."
         ),
-        tools=[WebResearchTool()],
-        llm=llm,
+
+        backstory=(
+            "You are a web research specialist. "
+            "You search for relevant evidence and "
+            "record useful source URLs."
+        ),
+
+        tools=[
+            WebResearchTool()
+        ],
+
+        llm=create_llm(temperature=0.1),
+
         verbose=False,
+
         allow_delegation=False
     )
