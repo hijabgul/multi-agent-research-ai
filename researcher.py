@@ -1,3 +1,4 @@
+```python
 from crewai import Agent
 
 from llm_config import create_llm
@@ -10,14 +11,14 @@ def create_researcher():
         role="Web Researcher",
 
         goal=(
-            "Find current and reliable information "
-            "from the web."
+            "Find reliable and current information "
+            "from the internet."
         ),
 
         backstory=(
-            "You are a web research specialist. "
-            "You search for relevant evidence and "
-            "record useful source URLs."
+            "You are a professional web researcher. "
+            "You search the internet using the Web Research Tool "
+            "and collect concise evidence with source URLs."
         ),
 
         tools=[
@@ -30,3 +31,4 @@ def create_researcher():
 
         allow_delegation=False
     )
+```
