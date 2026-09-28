@@ -1,36 +1,21 @@
-import os
+from crewai import Agent
 
-from crewai import Agent, LLM
+from llm_config import create_llm
 
 
 def create_planner():
 
-    llm = LLM(
-        model="groq/openai/gpt-oss-120b",
-        api_key=os.environ["GROQ_API_KEY"],
-        temperature=0.2
-    )
+    llm = create_llm(temperature=0.2)
 
-    planner = Agent(
-
+    return Agent(
         role="Research Planner",
-
-        goal=(
-            "Create a focused and practical research plan "
-            "for the user's research question."
-        ),
-
+        goal="Create a clear research plan for the user's question.",
         backstory=(
             "You are an experienced research planner. "
-            "You break a research question into important "
-            "subtopics and identify what evidence is needed."
+            "You divide complex questions into focused research areas "
+            "and identify what evidence should be collected."
         ),
-
         llm=llm,
-
         verbose=False,
-
         allow_delegation=False
     )
-
-    return planner
