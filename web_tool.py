@@ -1,106 +1,103 @@
+```python
 from typing import Type
 
-import requests
-from bs4 import BeautifulSoup
-from ddgs import DDGS
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from ddgs import DDGS
+
+
+# ============================================================
+# TOOL INPUT SCHEMA
+# ============================================================
 
 class WebResearchInput(BaseModel):
+
     query: str = Field(
         ...,
-        description="The research question or search query."
+        description=(
+            "The exact web search query to search for. "
+            "Example: latest impacts of artificial intelligence on education"
+        )
     )
 
 
+# ============================================================
+# WEB RESEARCH TOOL
+# ============================================================
+
 class WebResearchTool(BaseTool):
-    name: str = "Web Research Tool"
+
+    name: str = "web_research_tool"
 
     description: str = (
-        "Searches the web for current information and extracts "
-        "useful content from relevant webpages."
+        "Search the internet for current information. "
+        "Use this tool when you need web sources, facts, "
+        "recent information, or supporting evidence. "
+        "The input must contain only a search query."
     )
 
     args_schema: Type[BaseModel] = WebResearchInput
 
+    # --------------------------------------------------------
+    # TOOL FUNCTION
+    # --------------------------------------------------------
+
     def _run(self, query: str) -> str:
+
+        query = query.strip()
+
+        if not query:
+
+            return "No search query was provided."
 
         try:
 
-            with DDGS() as ddgs:
-                results = list(
-                    ddgs.text(
-                        query,
-                        max_results=5
-                    )
-                )
+            # Search only a small number of results
+            # to keep the agent efficient.
 
-            if not results:
-                return "No search results found."
+            results = DDGS().text(
+                query,
+                max_results=5
+            )
 
-            sources = []
+        except Exception as e:
 
-            for number, result in enumerate(results, start=1):
+            return (
+                "Web search failed. "
+                f"Error: {str(e)}"
+            )
 
-                title = result.get(
-                    "title",
-                    "Untitled"
-                )
+        if not results:
 
-                url = result.get(
-                    "href",
-                    ""
-                )
+            return (
+                f"No web results were found for: {query}"
+            )
 
-                snippet = result.get(
-                    "body",
-                    ""
-                )
+        output = []
 
-                webpage_text = ""
+        for number, result in enumerate(results, start=1):
 
-                if url:
+            title = result.get(
+                "title",
+                "Untitled"
+            )
 
-                    try:
+            url = result.get(
+                "href",
+                ""
+            )
 
-                        response = requests.get(
-                            url,
-                            timeout=10,
-                            headers={
-                                "User-Agent": "Mozilla/5.0"
-                            }
-                        )
+            body = result.get(
+                "body",
+                ""
+            )
 
-                        if response.ok:
+            # Keep snippets short.
+            body = body[:500]
 
-                            soup = BeautifulSoup(
-                                response.text,
-                                "html.parser"
-                            )
-
-                            for tag in soup(
-                                [
-                                    "script",
-                                    "style",
-                                    "nav",
-                                    "footer"
-                                ]
-                            ):
-                                tag.decompose()
-
-                            webpage_text = soup.get_text(
-                                separator=" ",
-                                strip=True
-                            )
-
-                            webpage_text = webpage_text[:5000]
-
-                    except Exception:
-                        webpage_text = ""
-
-                sources.append(
-                    f"""
+            output.append(
+                f"""
 SOURCE {number}
 
 Title:
@@ -109,19 +106,10 @@ Title:
 URL:
 {url}
 
-Search Summary:
-{snippet}
-
-Webpage Content:
-{webpage_text}
-"""
-                )
-
-            return "\n".join(sources)
-
-        except Exception as error:
-
-            return (
-                "The web research tool encountered an error: "
-                f"{error}"
+Summary:
+{body}
+""".strip()
             )
+
+        return "\n\n".join(output)
+```
