@@ -1,10 +1,10 @@
 import html
 import re
+import time
 from io import BytesIO
 
 import streamlit as st
-
-from crewai import Agent, Task, Crew, Process
+from crewai import Crew, Task, Process
 
 from planner import create_planner
 from researcher import create_researcher
@@ -14,7 +14,7 @@ from report_writer import create_report_writer
 
 
 # ============================================================
-# PAGE CONFIGURATION
+# PAGE CONFIG
 # ============================================================
 
 st.set_page_config(
@@ -26,486 +26,400 @@ st.set_page_config(
 
 
 # ============================================================
-# CUSTOM CSS
 # BLACK + GOLD UI
 # ============================================================
 
 st.html("""
 <style>
 
-    /* --------------------------------------------------------
-       GLOBAL
-    -------------------------------------------------------- */
-
-    .stApp {
-        background:
-            radial-gradient(
-                circle at 80% 0%,
-                rgba(212, 175, 55, 0.08),
-                transparent 30%
-            ),
-            #080808;
-        color: #f5f5f5;
-    }
-
-    .main {
-        background: #080808;
-    }
-
-    /* Hide Streamlit default elements */
-
-    #MainMenu {
-        visibility: hidden;
-    }
-
-    footer {
-        visibility: hidden;
-    }
-
-    header {
-        background: transparent !important;
-    }
-
-
-    /* --------------------------------------------------------
-       SIDEBAR
-    -------------------------------------------------------- */
-
-    section[data-testid="stSidebar"] {
-        background:
-            linear-gradient(
-                180deg,
-                #0c0c0c 0%,
-                #090909 100%
-            );
-
-        border-right: 1px solid rgba(212, 175, 55, 0.25);
-    }
-
-    section[data-testid="stSidebar"] > div {
-        padding-top: 1.5rem;
-    }
-
-
-    /* --------------------------------------------------------
-       BRAND
-    -------------------------------------------------------- */
-
-    .brand {
-        padding: 8px 4px 20px 4px;
-        border-bottom: 1px solid rgba(212, 175, 55, 0.18);
-        margin-bottom: 22px;
-    }
-
-    .brand-title {
-        color: #d4af37;
-        font-size: 27px;
-        font-weight: 800;
-        letter-spacing: -0.5px;
-        margin-bottom: 4px;
-    }
-
-    .brand-subtitle {
-        color: #888888;
-        font-size: 12px;
-        line-height: 1.5;
-    }
-
-
-    /* --------------------------------------------------------
-       SIDEBAR TOOL CARD
-    -------------------------------------------------------- */
-
-    .tool-card {
-        background:
-            linear-gradient(
-                145deg,
-                rgba(212, 175, 55, 0.10),
-                rgba(255, 255, 255, 0.025)
-            );
-
-        border: 1px solid rgba(212, 175, 55, 0.30);
-        border-radius: 14px;
-        padding: 15px;
-        margin: 12px 0 20px 0;
-    }
-
-    .tool-header {
-        display: flex;
-        align-items: center;
-        gap: 9px;
-        color: #d4af37;
-        font-size: 14px;
-        font-weight: 700;
-        margin-bottom: 10px;
-    }
-
-    .tool-icon {
-        width: 28px;
-        height: 28px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(212, 175, 55, 0.14);
-        border: 1px solid rgba(212, 175, 55, 0.25);
-    }
-
-    .tool-name {
-        color: #ffffff;
-        font-size: 13px;
-        font-weight: 600;
-        margin-bottom: 4px;
-    }
-
-    .tool-description {
-        color: #858585;
-        font-size: 11px;
-        line-height: 1.5;
-    }
-
-    .tool-status {
-        margin-top: 11px;
-        color: #d4af37;
-        font-size: 10px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.7px;
-    }
-
-
-    /* --------------------------------------------------------
-       SIDEBAR INFO
-    -------------------------------------------------------- */
-
-    .sidebar-section-title {
-        color: #d4af37;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin: 22px 0 10px 2px;
-    }
-
-    .sidebar-info {
-        color: #858585;
-        font-size: 12px;
-        line-height: 1.7;
-    }
-
-    .sidebar-info strong {
-        color: #d0d0d0;
-    }
-
-
-    /* --------------------------------------------------------
-       MAIN HERO
-    -------------------------------------------------------- */
-
-    .hero {
-        padding: 20px 0 25px 0;
-    }
-
-    .hero-eyebrow {
-        color: #d4af37;
-        font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        margin-bottom: 9px;
-    }
-
-    .hero-title {
-        color: #ffffff;
-        font-size: 48px;
-        font-weight: 800;
-        letter-spacing: -2px;
-        line-height: 1.05;
-        margin: 0;
-    }
-
-    .hero-title span {
-        color: #d4af37;
-    }
-
-    .hero-description {
-        color: #8d8d8d;
-        font-size: 15px;
-        max-width: 720px;
-        line-height: 1.7;
-        margin-top: 13px;
-    }
-
-
-    /* --------------------------------------------------------
-       SECTION LABEL
-    -------------------------------------------------------- */
-
-    .section-label {
-        color: #d4af37;
-        font-size: 11px;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 1.4px;
-        margin: 18px 0 10px 0;
-    }
-
-
-    /* --------------------------------------------------------
-       AGENT CURRENT CARD
-    -------------------------------------------------------- */
-
-    .agent-card {
-        background:
-            linear-gradient(
-                135deg,
-                rgba(212, 175, 55, 0.09),
-                rgba(255, 255, 255, 0.025)
-            );
-
-        border: 1px solid rgba(212, 175, 55, 0.22);
-        border-radius: 16px;
-        padding: 20px;
-        margin-bottom: 14px;
-    }
-
-    .agent-current {
-        border-color: rgba(212, 175, 55, 0.55);
-        box-shadow:
-            0 0 35px rgba(212, 175, 55, 0.06);
-    }
-
-    .agent-label {
-        color: #d4af37;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 9px;
-    }
-
-    .agent-title {
-        color: #ffffff;
-        font-size: 22px;
-        font-weight: 750;
-        margin-bottom: 6px;
-    }
-
-    .agent-description {
-        color: #8c8c8c;
-        font-size: 13px;
-        line-height: 1.6;
-    }
-
-
-    /* --------------------------------------------------------
-       PIPELINE
-    -------------------------------------------------------- */
-
-    .pipeline {
-        background: rgba(255, 255, 255, 0.018);
-        border: 1px solid rgba(255, 255, 255, 0.07);
-        border-radius: 15px;
-        padding: 8px 16px;
-        margin-bottom: 22px;
-    }
-
-    .pipeline-row {
-        display: flex;
-        align-items: center;
-        min-height: 52px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.045);
-    }
-
-    .pipeline-row:last-child {
-        border-bottom: none;
-    }
-
-    .dot {
-        width: 9px;
-        height: 9px;
-        border-radius: 50%;
-        margin-right: 13px;
-        flex-shrink: 0;
-    }
-
-    .dot-done {
-        background: #d4af37;
-        box-shadow: 0 0 9px rgba(212, 175, 55, 0.45);
-    }
-
-    .dot-working {
-        background: #f3d76b;
-        box-shadow:
-            0 0 0 4px rgba(212, 175, 55, 0.10),
-            0 0 14px rgba(212, 175, 55, 0.65);
-    }
-
-    .dot-waiting {
-        background: #343434;
-        border: 1px solid #505050;
-    }
-
-    .pipeline-name {
-        color: #dedede;
-        font-size: 13px;
-        font-weight: 600;
-        flex: 1;
-    }
-
-    .pipeline-status {
-        color: #737373;
-        font-size: 11px;
-    }
-
-
-    /* --------------------------------------------------------
-       INPUT
-    -------------------------------------------------------- */
-
-    div[data-testid="stTextArea"] textarea {
-        background: #101010 !important;
-        color: #f5f5f5 !important;
-        border: 1px solid #303030 !important;
-        border-radius: 13px !important;
-        padding: 15px !important;
-    }
-
-    div[data-testid="stTextArea"] textarea:focus {
-        border: 1px solid #d4af37 !important;
-        box-shadow:
-            0 0 0 1px rgba(212, 175, 55, 0.15) !important;
-    }
-
-
-    /* --------------------------------------------------------
-       BUTTON
-    -------------------------------------------------------- */
-
-    .stButton > button {
-        background: #d4af37 !important;
-        color: #080808 !important;
-        border: none !important;
-        border-radius: 10px !important;
-        font-weight: 800 !important;
-        min-height: 45px;
-        transition: 0.2s ease;
-    }
-
-    .stButton > button:hover {
-        background: #e6c653 !important;
-        color: #000000 !important;
-        border: none !important;
-        transform: translateY(-1px);
-    }
-
-
-    /* --------------------------------------------------------
-       REPORT CARD
-    -------------------------------------------------------- */
-
-    .report-card {
-        background: #0d0d0d;
-        border: 1px solid rgba(212, 175, 55, 0.25);
-        border-radius: 16px;
-        padding: 25px;
-        margin-top: 20px;
-    }
-
-    .report-header {
-        color: #d4af37;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-        font-weight: 800;
-        margin-bottom: 12px;
-    }
-
-
-    /* --------------------------------------------------------
-       SOURCE CARD
-    -------------------------------------------------------- */
-
-    .source-card {
-        background: #101010;
-        border: 1px solid rgba(255, 255, 255, 0.07);
-        border-radius: 11px;
-        padding: 12px 14px;
-        margin: 8px 0;
-    }
-
-    .source-number {
-        color: #d4af37;
-        font-size: 11px;
-        font-weight: 800;
-    }
-
-    .source-title {
-        color: #e4e4e4;
-        font-size: 12px;
-        margin-top: 3px;
-    }
-
-    .source-url {
-        color: #777777;
-        font-size: 10px;
-        margin-top: 4px;
-        word-break: break-all;
-    }
-
-
-    /* --------------------------------------------------------
-       METRIC CARDS
-    -------------------------------------------------------- */
-
-    .metric-card {
-        background: #101010;
-        border: 1px solid rgba(212, 175, 55, 0.18);
-        border-radius: 13px;
-        padding: 16px;
-        text-align: center;
-    }
-
-    .metric-number {
-        color: #d4af37;
-        font-size: 25px;
-        font-weight: 800;
-    }
-
-    .metric-label {
-        color: #777777;
-        font-size: 10px;
-        text-transform: uppercase;
-        letter-spacing: 0.8px;
-        margin-top: 3px;
-    }
-
-
-    /* --------------------------------------------------------
-       DIVIDER
-    -------------------------------------------------------- */
-
-    hr {
-        border-color: rgba(255, 255, 255, 0.07) !important;
-    }
-
-
-    /* --------------------------------------------------------
-       EXPANDER
-    -------------------------------------------------------- */
-
-    div[data-testid="stExpander"] {
-        background: #0d0d0d;
-        border: 1px solid rgba(255, 255, 255, 0.07);
-        border-radius: 13px;
-    }
+.stApp {
+    background:
+        radial-gradient(
+            circle at 80% 0%,
+            rgba(212,175,55,0.09),
+            transparent 30%
+        ),
+        #080808;
+    color: #f5f5f5;
+}
+
+.main {
+    background: #080808;
+}
+
+#MainMenu {
+    visibility: hidden;
+}
+
+footer {
+    visibility: hidden;
+}
+
+header {
+    background: transparent !important;
+}
+
+
+/* SIDEBAR */
+
+section[data-testid="stSidebar"] {
+    background: #090909;
+    border-right: 1px solid rgba(212,175,55,0.25);
+}
+
+section[data-testid="stSidebar"] > div {
+    padding-top: 1.5rem;
+}
+
+
+/* BRAND */
+
+.brand {
+    padding: 8px 4px 20px 4px;
+    border-bottom: 1px solid rgba(212,175,55,0.18);
+    margin-bottom: 22px;
+}
+
+.brand-title {
+    color: #d4af37;
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.brand-subtitle {
+    color: #858585;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+
+/* SIDEBAR TITLES */
+
+.sidebar-section-title {
+    color: #d4af37;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin: 22px 0 10px 2px;
+}
+
+
+/* TOOL CARD */
+
+.tool-card {
+    background:
+        linear-gradient(
+            145deg,
+            rgba(212,175,55,0.11),
+            rgba(255,255,255,0.025)
+        );
+
+    border: 1px solid rgba(212,175,55,0.30);
+    border-radius: 14px;
+    padding: 15px;
+    margin-bottom: 18px;
+}
+
+.tool-header {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #d4af37;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.tool-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(212,175,55,0.14);
+    border: 1px solid rgba(212,175,55,0.25);
+}
+
+.tool-name {
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.tool-description {
+    color: #858585;
+    font-size: 11px;
+    line-height: 1.5;
+    margin-top: 5px;
+}
+
+.tool-status {
+    color: #d4af37;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    margin-top: 11px;
+}
+
+
+/* SIDEBAR INFO */
+
+.sidebar-info {
+    color: #858585;
+    font-size: 12px;
+    line-height: 1.9;
+}
+
+.sidebar-info strong {
+    color: #d0d0d0;
+}
+
+
+/* HERO */
+
+.hero {
+    padding: 20px 0 25px 0;
+}
+
+.hero-eyebrow {
+    color: #d4af37;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.hero-title {
+    color: #ffffff;
+    font-size: 48px;
+    font-weight: 850;
+    letter-spacing: -2px;
+    line-height: 1.05;
+    margin: 8px 0 0 0;
+}
+
+.hero-title span {
+    color: #d4af37;
+}
+
+.hero-description {
+    color: #8d8d8d;
+    font-size: 15px;
+    max-width: 730px;
+    line-height: 1.7;
+    margin-top: 13px;
+}
+
+
+/* LABEL */
+
+.section-label {
+    color: #d4af37;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    margin: 18px 0 10px 0;
+}
+
+
+/* AGENT CARD */
+
+.agent-card {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(212,175,55,0.09),
+            rgba(255,255,255,0.025)
+        );
+
+    border: 1px solid rgba(212,175,55,0.22);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 14px;
+}
+
+.agent-current {
+    border-color: rgba(212,175,55,0.55);
+    box-shadow: 0 0 35px rgba(212,175,55,0.06);
+}
+
+.agent-label {
+    color: #d4af37;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 9px;
+}
+
+.agent-title {
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: 750;
+}
+
+.agent-description {
+    color: #8c8c8c;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-top: 6px;
+}
+
+
+/* PIPELINE */
+
+.pipeline {
+    background: rgba(255,255,255,0.018);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 15px;
+    padding: 8px 16px;
+    margin-bottom: 22px;
+}
+
+.pipeline-row {
+    display: flex;
+    align-items: center;
+    min-height: 52px;
+    border-bottom: 1px solid rgba(255,255,255,0.045);
+}
+
+.pipeline-row:last-child {
+    border-bottom: none;
+}
+
+.dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-right: 13px;
+    flex-shrink: 0;
+}
+
+.dot-done {
+    background: #d4af37;
+    box-shadow: 0 0 9px rgba(212,175,55,0.45);
+}
+
+.dot-working {
+    background: #f3d76b;
+    box-shadow:
+        0 0 0 4px rgba(212,175,55,0.10),
+        0 0 14px rgba(212,175,55,0.65);
+}
+
+.dot-waiting {
+    background: #343434;
+    border: 1px solid #505050;
+}
+
+.pipeline-name {
+    color: #dedede;
+    font-size: 13px;
+    font-weight: 600;
+    flex: 1;
+}
+
+.pipeline-status {
+    color: #737373;
+    font-size: 11px;
+}
+
+
+/* TEXT AREA */
+
+div[data-testid="stTextArea"] textarea {
+    background: #101010 !important;
+    color: #f5f5f5 !important;
+    border: 1px solid #303030 !important;
+    border-radius: 13px !important;
+    padding: 15px !important;
+}
+
+div[data-testid="stTextArea"] textarea:focus {
+    border: 1px solid #d4af37 !important;
+    box-shadow: 0 0 0 1px rgba(212,175,55,0.15) !important;
+}
+
+
+/* BUTTON */
+
+.stButton > button {
+    background: #d4af37 !important;
+    color: #080808 !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: 800 !important;
+    min-height: 45px;
+}
+
+.stButton > button:hover {
+    background: #e6c653 !important;
+    color: #000000 !important;
+}
+
+
+/* REPORT */
+
+.report-card {
+    background: #0d0d0d;
+    border: 1px solid rgba(212,175,55,0.25);
+    border-radius: 16px;
+    padding: 25px;
+    margin-top: 20px;
+}
+
+.report-header {
+    color: #d4af37;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 800;
+}
+
+
+/* METRICS */
+
+.metric-card {
+    background: #101010;
+    border: 1px solid rgba(212,175,55,0.18);
+    border-radius: 13px;
+    padding: 16px;
+    text-align: center;
+}
+
+.metric-number {
+    color: #d4af37;
+    font-size: 25px;
+    font-weight: 800;
+}
+
+.metric-label {
+    color: #777777;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-top: 3px;
+}
+
+
+/* EXPANDER */
+
+div[data-testid="stExpander"] {
+    background: #0d0d0d;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 13px;
+}
 
 </style>
 """)
 
 
 # ============================================================
-# AGENT NAMES
+# AGENTS
 # ============================================================
 
 agent_names = [
@@ -521,17 +435,11 @@ agent_names = [
 # SESSION STATE
 # ============================================================
 
-if "research_started" not in st.session_state:
-    st.session_state.research_started = False
-
 if "research_complete" not in st.session_state:
     st.session_state.research_complete = False
 
 if "final_report" not in st.session_state:
     st.session_state.final_report = ""
-
-if "research_sources" not in st.session_state:
-    st.session_state.research_sources = []
 
 if "topic" not in st.session_state:
     st.session_state.topic = ""
@@ -545,7 +453,6 @@ with st.sidebar:
 
     st.html("""
     <div class="brand">
-
         <div class="brand-title">
             ✦ ResearchAI
         </div>
@@ -554,7 +461,6 @@ with st.sidebar:
             Multi-agent research intelligence
             powered by CrewAI.
         </div>
-
     </div>
     """)
 
@@ -592,13 +498,11 @@ with st.sidebar:
     </div>
 
     <div class="sidebar-info">
-
         <strong>01</strong> Research Planning<br>
         <strong>02</strong> Web Research<br>
         <strong>03</strong> Source Analysis<br>
         <strong>04</strong> Fact Checking<br>
         <strong>05</strong> Report Writing
-
     </div>
     """)
 
@@ -608,12 +512,10 @@ with st.sidebar:
     </div>
 
     <div class="sidebar-info">
-
         <strong>Agents:</strong> CrewAI<br>
         <strong>LLM:</strong> Groq<br>
         <strong>Search:</strong> DuckDuckGo<br>
         <strong>Interface:</strong> Streamlit
-
     </div>
     """)
 
@@ -629,9 +531,9 @@ st.html("""
         Multi-Agent Research System
     </div>
 
-    <h1 class="hero-title">
+    <div class="hero-title">
         Research <span>Intelligently.</span>
-    </h1>
+    </div>
 
     <div class="hero-description">
         Ask a research question and let five specialized AI agents
@@ -643,7 +545,7 @@ st.html("""
 
 
 # ============================================================
-# INPUT AREA
+# INPUT
 # ============================================================
 
 st.html("""
@@ -664,12 +566,12 @@ topic = st.text_area(
 
 
 # ============================================================
-# START BUTTON
+# BUTTON
 # ============================================================
 
-start_col1, start_col2, start_col3 = st.columns([1, 1, 3])
+button_col, empty_col = st.columns([1, 3])
 
-with start_col1:
+with button_col:
 
     analyze_clicked = st.button(
         "✦ Analyze Research",
@@ -678,14 +580,14 @@ with start_col1:
 
 
 # ============================================================
-# STATUS CONTAINERS
+# STATUS CONTAINER
 # ============================================================
 
 status_box = st.empty()
 
 
 # ============================================================
-# STATUS DISPLAY
+# SHOW STATUS
 # ============================================================
 
 def show_status(current_agent, message):
@@ -697,17 +599,14 @@ def show_status(current_agent, message):
     for index, agent in enumerate(agent_names):
 
         if index < current_index:
-
             dot_class = "dot-done"
             status = "Completed"
 
         elif index == current_index:
-
             dot_class = "dot-working"
             status = "Working"
 
         else:
-
             dot_class = "dot-waiting"
             status = "Waiting"
 
@@ -728,8 +627,7 @@ def show_status(current_agent, message):
         """
 
     status_html = f"""
-
-    <div class="status-wrapper">
+    <div>
 
         <div class="section-label">
             Agent Activity
@@ -758,11 +656,9 @@ def show_status(current_agent, message):
         </div>
 
     </div>
-
     """
 
     with status_box.container():
-
         st.html(status_html)
 
 
@@ -777,7 +673,6 @@ def show_completed_status():
     for agent in agent_names:
 
         pipeline_rows += f"""
-
         <div class="pipeline-row">
 
             <div class="dot dot-done"></div>
@@ -791,12 +686,10 @@ def show_completed_status():
             </div>
 
         </div>
-
         """
 
     status_html = f"""
-
-    <div class="status-wrapper">
+    <div>
 
         <div class="section-label">
             Agent Activity
@@ -809,12 +702,12 @@ def show_completed_status():
             </div>
 
             <div class="agent-title">
-                All research agents completed
+                All five agents completed
             </div>
 
             <div class="agent-description">
-                The research has been planned, collected,
-                analyzed, fact-checked and written into a final report.
+                Planning, web research, analysis,
+                fact checking and report writing are complete.
             </div>
 
         </div>
@@ -826,12 +719,83 @@ def show_completed_status():
         </div>
 
     </div>
-
     """
 
     with status_box.container():
-
         st.html(status_html)
+
+
+# ============================================================
+# RATE-LIMIT SAFE CREW RUNNER
+# ============================================================
+
+def run_crew_with_retry(crew, agent_name, max_retries=3):
+
+    for attempt in range(max_retries):
+
+        try:
+
+            return crew.kickoff()
+
+        except Exception as e:
+
+            error_text = str(e)
+
+            is_rate_limit = (
+                "RateLimitError" in error_text
+                or "rate_limit_exceeded" in error_text
+                or "tokens per minute" in error_text
+                or "429" in error_text
+            )
+
+            if not is_rate_limit:
+                raise
+
+            # -----------------------------------------------
+            # Try to read Groq's suggested wait time
+            # -----------------------------------------------
+
+            wait_seconds = 40
+
+            match = re.search(
+                r"try again in\s+([\d.]+)s",
+                error_text,
+                re.IGNORECASE
+            )
+
+            if match:
+
+                try:
+                    wait_seconds = float(match.group(1)) + 3
+                except ValueError:
+                    wait_seconds = 40
+
+            wait_seconds = max(10, min(wait_seconds, 90))
+
+            if attempt == max_retries - 1:
+
+                raise RuntimeError(
+                    f"{agent_name} reached the Groq token limit "
+                    f"after {max_retries} attempts. "
+                    f"Please wait about one minute and try again."
+                )
+
+            # -----------------------------------------------
+            # Visible retry message
+            # -----------------------------------------------
+
+            show_status(
+                agent_name,
+                (
+                    f"Groq token limit reached. "
+                    f"Waiting {int(wait_seconds)} seconds before retry "
+                    f"({attempt + 1}/{max_retries})."
+                )
+            )
+
+            time.sleep(wait_seconds)
+
+    raise RuntimeError("Unable to complete the agent task.")
 
 
 # ============================================================
@@ -846,25 +810,20 @@ if analyze_clicked:
 
         st.stop()
 
+    topic = topic.strip()
 
-    # --------------------------------------------------------
-    # RESET
-    # --------------------------------------------------------
-
-    st.session_state.research_started = True
+    st.session_state.topic = topic
     st.session_state.research_complete = False
     st.session_state.final_report = ""
-    st.session_state.research_sources = []
-    st.session_state.topic = topic.strip()
 
 
     # ========================================================
-    # 1. RESEARCH PLANNER
+    # 1. PLANNER
     # ========================================================
 
     show_status(
         "Research Planner",
-        "Understanding the research question and creating a focused research plan."
+        "Breaking your question into a focused research plan."
     )
 
     try:
@@ -873,49 +832,43 @@ if analyze_clicked:
 
         planning_task = Task(
             description=f"""
-            Create a detailed research plan for the following question:
+            Create a short research plan for:
 
             {topic}
 
-            Break the question into the most important research areas.
+            Give:
+            1. Main question
+            2. 3-5 research areas
+            3. Important facts to verify
 
-            Identify:
-            - Main research questions
-            - Important subtopics
-            - Types of evidence required
-            - Important facts that need verification
-            - Information that should be included in the final report
-
-            Do not write the final report.
-            Only create the research plan.
+            Keep the plan concise.
             """,
 
             expected_output=(
-                "A structured research plan containing research questions, "
-                "subtopics, evidence requirements and verification points."
+                "A concise research plan with 3-5 research areas "
+                "and key verification points."
             ),
 
             agent=planner
         )
 
-        planner_crew = Crew(
+        crew = Crew(
             agents=[planner],
             tasks=[planning_task],
             process=Process.sequential,
             verbose=False
         )
 
-        planning_result = planner_crew.kickoff()
+        planning_result = run_crew_with_retry(
+            crew,
+            "Research Planner"
+        )
 
         planning_text = str(planning_result)
 
     except Exception as e:
 
-        st.error(
-            "Research Planner encountered an error:\n\n"
-            + str(e)
-        )
-
+        st.error(f"Research Planner failed: {e}")
         st.stop()
 
 
@@ -925,7 +878,7 @@ if analyze_clicked:
 
     show_status(
         "Web Researcher",
-        "Searching current web sources and collecting relevant evidence."
+        "Searching the web for current evidence and reliable sources."
     )
 
     try:
@@ -934,54 +887,49 @@ if analyze_clicked:
 
         research_task = Task(
             description=f"""
-            Research the following question using your web research tool:
+            Research this question using the web search tool:
 
             {topic}
 
-            Here is the research plan created by the Research Planner:
+            Research plan:
+            {planning_text[:5000]}
 
-            {planning_text}
+            Find the most important current information.
 
-            Search for current, relevant and reliable web sources.
+            Return ONLY:
+            - 5-8 key findings
+            - source title
+            - source URL
 
-            For every important finding:
-            - State the finding
-            - Give supporting evidence
-            - Include the source title
-            - Include the source URL
-            - Prefer authoritative and recent sources
-
-            Do not invent sources or URLs.
-
-            Produce detailed research notes for the Source Analyst.
+            Be concise.
+            Do not write a report.
+            Do not invent sources.
             """,
 
             expected_output=(
-                "Detailed research notes containing findings, evidence "
-                "and source titles and URLs."
+                "5-8 concise findings with source titles and URLs."
             ),
 
             agent=researcher
         )
 
-        researcher_crew = Crew(
+        crew = Crew(
             agents=[researcher],
             tasks=[research_task],
             process=Process.sequential,
             verbose=False
         )
 
-        research_result = researcher_crew.kickoff()
+        research_result = run_crew_with_retry(
+            crew,
+            "Web Researcher"
+        )
 
         research_text = str(research_result)
 
     except Exception as e:
 
-        st.error(
-            "Web Researcher encountered an error:\n\n"
-            + str(e)
-        )
-
+        st.error(f"Web Researcher failed: {e}")
         st.stop()
 
 
@@ -991,7 +939,7 @@ if analyze_clicked:
 
     show_status(
         "Source Analyst",
-        "Examining the collected research and organizing the strongest evidence."
+        "Comparing findings and identifying the strongest evidence."
     )
 
     try:
@@ -1000,59 +948,48 @@ if analyze_clicked:
 
         analysis_task = Task(
             description=f"""
-            Analyze the research collected for this question:
+            Analyze this research.
 
+            Question:
             {topic}
 
-            RESEARCH PLAN:
+            Research:
+            {research_text[:7000]}
 
-            {planning_text}
+            Identify:
+            - strongest findings
+            - weak or unclear claims
+            - important evidence
+            - claims needing fact checking
 
-            WEB RESEARCH:
-
-            {research_text}
-
-            Your job is to:
-
-            1. Identify the most important findings.
-            2. Separate factual information from opinions.
-            3. Identify supporting evidence.
-            4. Identify weak, unclear or unsupported claims.
-            5. Organize the evidence logically.
-            6. Identify claims that should receive additional fact checking.
-
-            Do not write the final report.
-            Prepare a structured evidence analysis for the Fact Checker
-            and Report Writer.
+            Keep the analysis concise.
             """,
 
             expected_output=(
-                "A structured analysis of the research, including "
-                "important evidence, supported claims and claims "
-                "requiring verification."
+                "A concise evidence analysis with strong findings "
+                "and claims requiring verification."
             ),
 
             agent=analyst
         )
 
-        analyst_crew = Crew(
+        crew = Crew(
             agents=[analyst],
             tasks=[analysis_task],
             process=Process.sequential,
             verbose=False
         )
 
-        analysis_result = analyst_crew.kickoff()
+        analysis_result = run_crew_with_retry(
+            crew,
+            "Source Analyst"
+        )
 
         analysis_text = str(analysis_result)
 
     except Exception as e:
 
-        st.error(
-            "Source Analyst encountered an error:\n\n"
-            + str(e)
-        )
-
+        st.error(f"Source Analyst failed: {e}")
         st.stop()
 
 
@@ -1062,71 +999,59 @@ if analyze_clicked:
 
     show_status(
         "Fact Checker",
-        "Independently verifying important claims against web sources."
+        "Independently checking the most important claims."
     )
 
     try:
 
         fact_checker = create_fact_checker()
 
-        fact_check_task = Task(
+        fact_task = Task(
             description=f"""
-            Fact-check the following research.
+            Fact-check the important claims below.
 
-            ORIGINAL QUESTION:
-
+            Question:
             {topic}
 
-            RESEARCH:
+            Claims and analysis:
+            {analysis_text[:5000]}
 
-            {research_text}
+            Use the web search tool.
 
-            SOURCE ANALYSIS:
+            For each important claim give:
+            - Supported
+            - Partially supported
+            - Not verified
 
-            {analysis_text}
+            Give a source URL when available.
 
-            Verify the most important factual claims using your web
-            research tool.
-
-            For each major claim:
-
-            - State the claim.
-            - Determine whether it is supported, partially supported,
-              contradicted, or cannot be verified.
-            - Give the evidence.
-            - Provide the source title and URL where possible.
-
-            Do not invent evidence.
-
-            Focus on factual accuracy and source reliability.
+            Keep the response concise.
             """,
 
             expected_output=(
-                "A fact-checking report containing verified claims, "
-                "uncertain claims, evidence and source URLs."
+                "A concise fact-check with claim status and source URLs."
             ),
 
             agent=fact_checker
         )
 
-        fact_checker_crew = Crew(
+        crew = Crew(
             agents=[fact_checker],
-            tasks=[fact_check_task],
+            tasks=[fact_task],
             process=Process.sequential,
             verbose=False
         )
 
-        fact_check_result = fact_checker_crew.kickoff()
+        fact_result = run_crew_with_retry(
+            crew,
+            "Fact Checker"
+        )
 
-        fact_check_text = str(fact_check_result)
+        fact_text = str(fact_result)
 
     except Exception as e:
 
-        st.error(
-            "Fact Checker encountered an error:\n\n"
-            + str(e)
-        )
-
+        st.error(f"Fact Checker failed: {e}")
         st.stop()
 
 
@@ -1136,36 +1061,31 @@ if analyze_clicked:
 
     show_status(
         "Research Report Writer",
-        "Combining verified evidence into the final research report."
+        "Writing the final evidence-based research report."
     )
 
     try:
 
-        report_writer = create_report_writer()
+        writer = create_report_writer()
 
         report_task = Task(
             description=f"""
-            Write a professional research report answering:
+            Write a professional research report about:
 
             {topic}
 
-            Use the following materials.
+            Use only the information below.
 
-            RESEARCH PLAN:
-            {planning_text}
+            Research:
+            {research_text[:6000]}
 
-            WEB RESEARCH:
-            {research_text}
+            Analysis:
+            {analysis_text[:4000]}
 
-            SOURCE ANALYSIS:
-            {analysis_text}
+            Fact check:
+            {fact_text[:4000]}
 
-            FACT CHECK:
-            {fact_check_text}
-
-            Create a clear evidence-based report.
-
-            Use this structure:
+            Structure:
 
             # Research Report
 
@@ -1175,9 +1095,7 @@ if analyze_clicked:
 
             ## Key Findings
 
-            ## Detailed Analysis
-
-            ## Evidence and Discussion
+            ## Analysis
 
             ## Limitations
 
@@ -1185,47 +1103,42 @@ if analyze_clicked:
 
             ## Sources
 
-            Important requirements:
+            Keep it clear and concise.
 
-            - Use only information supported by the supplied research.
-            - Do not invent facts.
-            - Do not invent citations.
-            - Clearly distinguish uncertain information.
-            - Keep the writing professional and readable.
-            - Include source URLs in the Sources section when available.
+            Do not invent facts or citations.
+            Include source URLs provided by the research.
             """,
 
             expected_output=(
-                "A complete professional research report with headings, "
-                "analysis, conclusion and source URLs."
+                "A concise professional research report with "
+                "sections and source URLs."
             ),
 
-            agent=report_writer
+            agent=writer
         )
 
-        report_crew = Crew(
-            agents=[report_writer],
+        crew = Crew(
+            agents=[writer],
             tasks=[report_task],
             process=Process.sequential,
             verbose=False
         )
 
-        report_result = report_crew.kickoff()
+        report_result = run_crew_with_retry(
+            crew,
+            "Research Report Writer"
+        )
 
         final_report = str(report_result)
 
     except Exception as e:
 
-        st.error(
-            "Research Report Writer encountered an error:\n\n"
-            + str(e)
-        )
-
+        st.error(f"Research Report Writer failed: {e}")
         st.stop()
 
 
     # ========================================================
-    # FINISHED
+    # COMPLETE
     # ========================================================
 
     st.session_state.final_report = final_report
@@ -1235,7 +1148,7 @@ if analyze_clicked:
 
 
 # ============================================================
-# SHOW EXISTING REPORT
+# FINAL REPORT
 # ============================================================
 
 if st.session_state.research_complete:
@@ -1248,84 +1161,51 @@ if st.session_state.research_complete:
     </div>
     """)
 
-    # --------------------------------------------------------
-    # METRICS
-    # --------------------------------------------------------
-
     words = len(final_report.split())
 
-    metric1, metric2, metric3 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
-    with metric1:
-
-        st.html(f"""
-        <div class="metric-card">
-
-            <div class="metric-number">
-                5
-            </div>
-
-            <div class="metric-label">
-                AI Agents
-            </div>
-
-        </div>
-        """)
-
-    with metric2:
-
-        st.html(f"""
-        <div class="metric-card">
-
-            <div class="metric-number">
-                {words:,}
-            </div>
-
-            <div class="metric-label">
-                Report Words
-            </div>
-
-        </div>
-        """)
-
-    with metric3:
+    with col1:
 
         st.html("""
         <div class="metric-card">
+            <div class="metric-number">5</div>
+            <div class="metric-label">AI Agents</div>
+        </div>
+        """)
 
-            <div class="metric-number">
-                ✓
-            </div>
+    with col2:
 
-            <div class="metric-label">
-                Fact Checked
-            </div>
+        st.html(f"""
+        <div class="metric-card">
+            <div class="metric-number">{words:,}</div>
+            <div class="metric-label">Report Words</div>
+        </div>
+        """)
 
+    with col3:
+
+        st.html("""
+        <div class="metric-card">
+            <div class="metric-number">✓</div>
+            <div class="metric-label">Fact Checked</div>
         </div>
         """)
 
 
-    # --------------------------------------------------------
-    # REPORT
-    # --------------------------------------------------------
-
     st.html("""
     <div class="report-card">
-
         <div class="report-header">
             Evidence-Based Research
         </div>
-
     </div>
     """)
 
-    st.markdown(
-        final_report
-    )
+    st.markdown(final_report)
 
 
     # ========================================================
-    # PDF GENERATION
+    # PDF
     # ========================================================
 
     def create_pdf(text):
@@ -1357,27 +1237,18 @@ if st.session_state.research_complete:
         title_style.alignment = TA_LEFT
 
         heading_style = styles["Heading2"]
-
         body_style = styles["BodyText"]
 
         story = []
 
-        lines = text.splitlines()
-
-        for line in lines:
+        for line in text.splitlines():
 
             clean_line = line.strip()
 
             if not clean_line:
 
-                story.append(
-                    Spacer(1, 6)
-                )
-
+                story.append(Spacer(1, 6))
                 continue
-
-
-            # Remove markdown formatting
 
             clean_line = re.sub(
                 r"\*\*(.*?)\*\*",
@@ -1391,51 +1262,27 @@ if st.session_state.research_complete:
                 clean_line
             )
 
-
             if clean_line.startswith("# "):
-
-                content = clean_line[2:].strip()
 
                 story.append(
                     Paragraph(
-                        html.escape(content),
+                        html.escape(clean_line[2:]),
                         title_style
                     )
                 )
 
-                story.append(
-                    Spacer(1, 10)
-                )
+                story.append(Spacer(1, 10))
 
             elif clean_line.startswith("## "):
 
-                content = clean_line[3:].strip()
-
                 story.append(
                     Paragraph(
-                        html.escape(content),
+                        html.escape(clean_line[3:]),
                         heading_style
                     )
                 )
 
-                story.append(
-                    Spacer(1, 6)
-                )
-
-            elif clean_line.startswith("### "):
-
-                content = clean_line[4:].strip()
-
-                story.append(
-                    Paragraph(
-                        html.escape(content),
-                        heading_style
-                    )
-                )
-
-                story.append(
-                    Spacer(1, 4)
-                )
+                story.append(Spacer(1, 6))
 
             else:
 
@@ -1446,10 +1293,7 @@ if st.session_state.research_complete:
                     )
                 )
 
-                story.append(
-                    Spacer(1, 5)
-                )
-
+                story.append(Spacer(1, 5))
 
         document.build(story)
 
@@ -1457,10 +1301,6 @@ if st.session_state.research_complete:
 
         return buffer.getvalue()
 
-
-    # --------------------------------------------------------
-    # DOWNLOAD BUTTON
-    # --------------------------------------------------------
 
     pdf_data = create_pdf(final_report)
 
