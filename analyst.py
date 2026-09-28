@@ -1,36 +1,20 @@
-import os
+from crewai import Agent
 
-from crewai import Agent, LLM
+from llm_config import create_llm
 
 
 def create_analyst():
 
-    llm = LLM(
-        model="groq/openai/gpt-oss-120b",
-        api_key=os.environ["GROQ_API_KEY"],
-        temperature=0.2
-    )
+    llm = create_llm(temperature=0.2)
 
-    analyst = Agent(
-
+    return Agent(
         role="Source Analyst",
-
-        goal=(
-            "Analyze the collected research and identify "
-            "important facts, evidence, patterns and disagreements."
-        ),
-
+        goal="Analyze research and identify important evidence and findings.",
         backstory=(
-            "You are a research analyst. "
-            "You carefully examine collected information, "
+            "You carefully examine research sources, "
             "separate facts from opinions and organize evidence."
         ),
-
         llm=llm,
-
         verbose=False,
-
         allow_delegation=False
     )
-
-    return analyst
