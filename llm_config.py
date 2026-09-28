@@ -15,5 +15,5 @@ def create_llm(temperature=0.1):
         model="groq/openai/gpt-oss-120b",
         api_key=os.environ["GROQ_API_KEY"],
         temperature=temperature,
-        max_tokens=1000
+        max_tokens=600
     )
