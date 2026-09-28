@@ -1,6 +1,5 @@
 import os
 import html
-from io import BytesIO
 
 import streamlit as st
 
@@ -32,8 +31,6 @@ st.markdown(
     """
     <style>
 
-    /* ---------- MAIN PAGE ---------- */
-
     .stApp {
         background: #f7f8fc;
     }
@@ -43,9 +40,6 @@ st.markdown(
         padding-top: 2rem;
         padding-bottom: 3rem;
     }
-
-
-    /* ---------- HEADER ---------- */
 
     .brand {
         font-size: 14px;
@@ -69,18 +63,12 @@ st.markdown(
         margin-bottom: 30px;
     }
 
-
-    /* ---------- SEARCH BOX ---------- */
-
     .search-label {
         font-size: 14px;
         font-weight: 700;
         color: #374151;
         margin-bottom: 8px;
     }
-
-
-    /* ---------- AGENT STATUS ---------- */
 
     .status-wrapper {
         margin-top: 25px;
@@ -127,9 +115,6 @@ st.markdown(
         font-size: 14px;
         color: #6b7280;
     }
-
-
-    /* ---------- PIPELINE ---------- */
 
     .pipeline {
         background: white;
@@ -183,9 +168,6 @@ st.markdown(
         color: #6b7280;
     }
 
-
-    /* ---------- REPORT ---------- */
-
     .report-box {
         background: white;
         border: 1px solid #e5e7eb;
@@ -201,20 +183,6 @@ st.markdown(
         color: #171923;
         margin-bottom: 15px;
     }
-
-
-    /* ---------- SOURCE BOX ---------- */
-
-    .source-box {
-        background: #f9fafb;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 15px;
-        margin-top: 10px;
-    }
-
-
-    /* ---------- BUTTON ---------- */
 
     .stButton > button {
         border-radius: 10px;
@@ -248,7 +216,7 @@ status_box = st.empty()
 
 
 # ============================================================
-# SHOW AGENT STATUS
+# SHOW STATUS
 # ============================================================
 
 def show_status(current_agent, message):
@@ -274,18 +242,12 @@ def show_status(current_agent, message):
         pipeline_rows += f"""
         <div class="pipeline-row">
             <div class="dot {dot_class}"></div>
-
-            <div class="pipeline-name">
-                {html.escape(agent)}
-            </div>
-
-            <div class="pipeline-status">
-                {status}
-            </div>
+            <div class="pipeline-name">{html.escape(agent)}</div>
+            <div class="pipeline-status">{status}</div>
         </div>
         """
 
-    complete_html = f"""
+    status_html = f"""
     <div class="status-wrapper">
 
         <div class="section-label">
@@ -308,7 +270,6 @@ def show_status(current_agent, message):
 
         </div>
 
-
         <div class="pipeline">
 
             {pipeline_rows}
@@ -321,7 +282,7 @@ def show_status(current_agent, message):
     with status_box.container():
 
         st.markdown(
-            complete_html,
+            status_html,
             unsafe_allow_html=True
         )
 
@@ -352,7 +313,7 @@ def show_completed_status():
         </div>
         """
 
-    complete_html = f"""
+    status_html = f"""
     <div class="status-wrapper">
 
         <div class="section-label">
@@ -376,7 +337,6 @@ def show_completed_status():
 
         </div>
 
-
         <div class="pipeline">
 
             {pipeline_rows}
@@ -389,13 +349,13 @@ def show_completed_status():
     with status_box.container():
 
         st.markdown(
-            complete_html,
+            status_html,
             unsafe_allow_html=True
         )
 
 
 # ============================================================
-# PAGE HEADER
+# HEADER
 # ============================================================
 
 st.markdown(
@@ -418,7 +378,7 @@ st.markdown(
 
 
 # ============================================================
-# SEARCH INPUT
+# INPUT
 # ============================================================
 
 st.markdown(
@@ -446,7 +406,7 @@ search_clicked = st.button(
 
 
 # ============================================================
-# RUN RESEARCH
+# START RESEARCH
 # ============================================================
 
 if search_clicked:
@@ -457,9 +417,9 @@ if search_clicked:
         st.stop()
 
 
-    # --------------------------------------------------------
+    # ========================================================
     # CREATE AGENTS
-    # --------------------------------------------------------
+    # ========================================================
 
     try:
 
@@ -471,19 +431,16 @@ if search_clicked:
 
     except Exception as error:
 
-        st.error(
-            "Unable to initialize the AI agents. "
-            "Please check your Groq API key and installed packages."
-        )
+        st.error("Unable to initialize the AI agents.")
 
         st.exception(error)
 
         st.stop()
 
 
-    # --------------------------------------------------------
-    # TASK 1 - PLANNING
-    # --------------------------------------------------------
+    # ========================================================
+    # PLANNER
+    # ========================================================
 
     show_status(
         "Research Planner",
@@ -512,9 +469,9 @@ if search_clicked:
     )
 
 
-    # --------------------------------------------------------
-    # TASK 2 - WEB RESEARCH
-    # --------------------------------------------------------
+    # ========================================================
+    # WEB RESEARCHER
+    # ========================================================
 
     show_status(
         "Web Researcher",
@@ -550,9 +507,9 @@ if search_clicked:
     )
 
 
-    # --------------------------------------------------------
-    # TASK 3 - ANALYSIS
-    # --------------------------------------------------------
+    # ========================================================
+    # ANALYST
+    # ========================================================
 
     show_status(
         "Source Analyst",
@@ -586,9 +543,9 @@ if search_clicked:
     )
 
 
-    # --------------------------------------------------------
-    # TASK 4 - FACT CHECKING
-    # --------------------------------------------------------
+    # ========================================================
+    # FACT CHECKER
+    # ========================================================
 
     show_status(
         "Fact Checker",
@@ -624,9 +581,9 @@ if search_clicked:
     )
 
 
-    # --------------------------------------------------------
-    # TASK 5 - FINAL REPORT
-    # --------------------------------------------------------
+    # ========================================================
+    # REPORT WRITER
+    # ========================================================
 
     show_status(
         "Research Report Writer",
@@ -682,9 +639,9 @@ if search_clicked:
     )
 
 
-    # --------------------------------------------------------
+    # ========================================================
     # CREW
-    # --------------------------------------------------------
+    # ========================================================
 
     crew = Crew(
         agents=[
@@ -706,9 +663,9 @@ if search_clicked:
     )
 
 
-    # --------------------------------------------------------
+    # ========================================================
     # RUN CREW
-    # --------------------------------------------------------
+    # ========================================================
 
     try:
 
@@ -716,24 +673,22 @@ if search_clicked:
 
     except Exception as error:
 
-        st.error(
-            "The research process failed."
-        )
+        st.error("The research process failed.")
 
         st.exception(error)
 
         st.stop()
 
 
-    # --------------------------------------------------------
-    # COMPLETE
-    # --------------------------------------------------------
+    # ========================================================
+    # COMPLETED
+    # ========================================================
 
     show_completed_status()
 
 
     # ========================================================
-    # FINAL REPORT
+    # REPORT
     # ========================================================
 
     report_text = str(result)
@@ -753,7 +708,7 @@ if search_clicked:
 
 
     # ========================================================
-    # DOWNLOAD REPORT
+    # DOWNLOAD
     # ========================================================
 
     st.download_button(
