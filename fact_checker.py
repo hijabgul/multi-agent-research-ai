@@ -1,42 +1,22 @@
-import os
+from crewai import Agent
 
-from crewai import Agent, LLM
-
+from llm_config import create_llm
 from web_tool import WebResearchTool
 
 
 def create_fact_checker():
 
-    llm = LLM(
-        model="groq/openai/gpt-oss-120b",
-        api_key=os.environ["GROQ_API_KEY"],
-        temperature=0.1
-    )
+    llm = create_llm(temperature=0.1)
 
-    fact_checker = Agent(
-
+    return Agent(
         role="Fact Checker",
-
-        goal=(
-            "Verify important research claims using "
-            "independent web sources."
-        ),
-
+        goal="Verify important research claims using independent sources.",
         backstory=(
-            "You are a careful fact checker. "
-            "You compare claims with external sources "
-            "and identify unsupported or conflicting information."
+            "You carefully verify claims, compare sources "
+            "and identify information that cannot be confirmed."
         ),
-
-        tools=[
-            WebResearchTool()
-        ],
-
+        tools=[WebResearchTool()],
         llm=llm,
-
         verbose=False,
-
         allow_delegation=False
     )
-
-    return fact_checker
