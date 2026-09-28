@@ -1,3 +1,4 @@
+```python
 from crewai import Agent
 
 from llm_config import create_llm
@@ -10,14 +11,14 @@ def create_fact_checker():
         role="Fact Checker",
 
         goal=(
-            "Verify important research claims using "
-            "independent web sources."
+            "Verify important claims using independent "
+            "web sources."
         ),
 
         backstory=(
-            "You are a fact-checking specialist. "
-            "You compare claims with reliable sources "
-            "and identify information that cannot be verified."
+            "You are a professional fact checker. "
+            "You use the Web Research Tool to verify claims "
+            "and identify whether information is supported."
         ),
 
         tools=[
@@ -30,3 +31,4 @@ def create_fact_checker():
 
         allow_delegation=False
     )
+```
