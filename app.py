@@ -1,7 +1,6 @@
 import os
 
 import streamlit as st
-
 from crewai import Crew, Process, Task
 
 from planner import create_planner
@@ -11,347 +10,313 @@ from fact_checker import create_fact_checker
 from report_writer import create_report_writer
 
 
-# ==========================================================
-# PAGE SETTINGS
-# ==========================================================
+# ============================================================
+# PAGE CONFIG
+# ============================================================
 
 st.set_page_config(
     page_title="Research AI",
     page_icon="✦",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
 
-# ==========================================================
-# CUSTOM CSS
-# ==========================================================
+# ============================================================
+# CSS
+# ============================================================
 
 st.markdown(
     """
     <style>
 
-    @import url(
-        'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
-    );
-
-    * {
-        font-family: 'Inter', sans-serif;
-    }
+    /* ---------- MAIN APP ---------- */
 
     .stApp {
-
-        background:
-            radial-gradient(
-                circle at 10% 10%,
-                rgba(91, 105, 255, 0.14),
-                transparent 30%
-            ),
-
-            radial-gradient(
-                circle at 90% 20%,
-                rgba(132, 88, 255, 0.12),
-                transparent 30%
-            ),
-
-            #080A0F;
-
-        color: #F5F7FA;
+        background: #090A0F;
     }
 
-
     .block-container {
-
         max-width: 1150px;
-
-        padding-top: 3rem;
-
+        padding-top: 2rem;
         padding-bottom: 4rem;
     }
 
 
-    /* HERO */
+    /* ---------- REMOVE DEFAULT STREAMLIT ELEMENTS ---------- */
 
-    .hero {
+    #MainMenu {
+        visibility: hidden;
+    }
 
-        text-align: center;
+    footer {
+        visibility: hidden;
+    }
 
-        padding:
-            2rem
-            0
-            2.5rem;
+    header {
+        background: transparent !important;
     }
 
 
-    .eyebrow {
+    /* ---------- TOP BRAND ---------- */
 
-        color: #8E9AAF;
+    .brand {
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        color: #A7B0C0;
+        margin-bottom: 3rem;
+    }
 
-        font-size: 0.78rem;
+    .brand-symbol {
+        color: #8B7CFF;
+        font-size: 1.1rem;
+        margin-right: 8px;
+    }
 
-        letter-spacing: 0.15em;
 
+    /* ---------- HERO ---------- */
+
+    .hero-title {
+        font-size: 3.8rem;
+        font-weight: 700;
+        letter-spacing: -0.055em;
+        line-height: 1.05;
+        color: #F5F7FB;
+        margin-bottom: 1rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1.05rem;
+        line-height: 1.7;
+        color: #8E97A8;
+        max-width: 650px;
+        margin-bottom: 2rem;
+    }
+
+
+    /* ---------- QUESTION CARD ---------- */
+
+    .question-card {
+        background: #11131A;
+        border: 1px solid #242833;
+        border-radius: 22px;
+        padding: 1.4rem;
+        margin-top: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+
+    /* ---------- TEXT AREA ---------- */
+
+    textarea {
+        background: #0D0F15 !important;
+        color: #F5F7FB !important;
+        border: 1px solid #292E39 !important;
+        border-radius: 15px !important;
+    }
+
+    textarea:focus {
+        border: 1px solid #7568FF !important;
+        box-shadow: 0 0 0 1px #7568FF !important;
+    }
+
+
+    /* ---------- BUTTON ---------- */
+
+    div.stButton > button {
+        width: 100%;
+        min-height: 50px;
+
+        border-radius: 14px;
+
+        background: #7568FF;
+
+        color: white;
+
+        border: none;
+
+        font-size: 0.95rem;
+
+        font-weight: 600;
+
+        transition: 0.2s ease;
+    }
+
+    div.stButton > button:hover {
+        background: #887DFF;
+        transform: translateY(-1px);
+    }
+
+    div.stButton > button:active {
+        transform: scale(0.99);
+    }
+
+
+    /* ---------- SECTION TITLES ---------- */
+
+    .section-label {
+        color: #727B8D;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
-
+        margin-top: 2rem;
         margin-bottom: 0.8rem;
     }
 
 
-    .hero h1 {
+    /* ---------- AGENT CARD ---------- */
 
-        font-size: 3.5rem;
+    .agent-card {
+        background: #11131A;
+        border: 1px solid #242833;
+        border-radius: 20px;
+        padding: 1.2rem 1.3rem;
+        margin-bottom: 1rem;
+    }
 
+
+    .agent-current {
+        background: linear-gradient(
+            135deg,
+            rgba(117, 104, 255, 0.13),
+            rgba(117, 104, 255, 0.035)
+        );
+
+        border: 1px solid rgba(117, 104, 255, 0.32);
+    }
+
+
+    .agent-label {
+        color: #7568FF;
+        font-size: 0.7rem;
         font-weight: 700;
-
-        letter-spacing: -0.05em;
-
-        margin-bottom: 0.7rem;
-    }
-
-
-    .hero p {
-
-        color: #9AA4B2;
-
-        font-size: 1.05rem;
-
-        max-width: 650px;
-
-        margin: auto;
-
-        line-height: 1.7;
-    }
-
-
-    /* GLASS CARD */
-
-    .glass-card {
-
-        background:
-            rgba(255, 255, 255, 0.045);
-
-        border:
-            1px solid
-            rgba(255, 255, 255, 0.09);
-
-        border-radius: 24px;
-
-        padding: 1.5rem;
-
-        backdrop-filter: blur(20px);
-
-        box-shadow:
-            0 20px 60px
-            rgba(0, 0, 0, 0.25);
-    }
-
-
-    /* CURRENT AGENT */
-
-    .current-agent {
-
-        background:
-            rgba(105, 120, 255, 0.10);
-
-        border:
-            1px solid
-            rgba(125, 140, 255, 0.25);
-
-        border-radius: 18px;
-
-        padding: 1.1rem 1.25rem;
-
-        margin:
-            1.5rem 0
-            1.3rem;
-    }
-
-
-    .current-label {
-
-        color: #8995FF;
-
-        font-size: 0.72rem;
-
-        font-weight: 700;
-
-        letter-spacing: 0.12em;
-
+        letter-spacing: 0.13em;
         text-transform: uppercase;
     }
 
 
-    .current-name {
+    .agent-title {
+        color: #F5F7FB;
+        font-size: 1.35rem;
+        font-weight: 650;
+        margin-top: 0.4rem;
+    }
 
-        font-size: 1.2rem;
 
-        font-weight: 600;
-
+    .agent-description {
+        color: #8992A3;
+        font-size: 0.88rem;
         margin-top: 0.35rem;
     }
 
 
-    .current-description {
+    /* ---------- PIPELINE ---------- */
 
-        color: #9AA4B2;
-
-        margin-top: 0.25rem;
-
-        font-size: 0.9rem;
+    .pipeline {
+        background: #11131A;
+        border: 1px solid #242833;
+        border-radius: 20px;
+        padding: 0.7rem 1.2rem;
     }
 
 
-    /* AGENT ROW */
-
-    .agent-row {
-
+    .pipeline-row {
         display: flex;
-
         align-items: center;
+        padding: 0.95rem 0;
 
-        gap: 12px;
-
-        padding: 0.8rem 0;
-
-        border-bottom:
-            1px solid
-            rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid #20242D;
     }
 
-
-    .agent-row:last-child {
-
+    .pipeline-row:last-child {
         border-bottom: none;
     }
 
 
-    .agent-dot {
-
-        width: 10px;
-
-        height: 10px;
-
+    .dot {
+        width: 9px;
+        height: 9px;
         border-radius: 50%;
-
+        margin-right: 13px;
         flex-shrink: 0;
     }
 
 
-    .done {
-
-        background: #69D39B;
-
-        box-shadow:
-            0 0 12px
-            rgba(105, 211, 155, 0.5);
+    .dot-done {
+        background: #5ED49A;
+        box-shadow: 0 0 10px rgba(94, 212, 154, 0.45);
     }
 
 
-    .working {
-
-        background: #8995FF;
-
-        box-shadow:
-            0 0 15px
-            rgba(137, 149, 255, 0.7);
+    .dot-working {
+        background: #7568FF;
+        box-shadow: 0 0 12px rgba(117, 104, 255, 0.65);
     }
 
 
-    .waiting {
-
-        background: #414754;
+    .dot-waiting {
+        background: #3C424E;
     }
 
 
-    .agent-name {
-
-        font-size: 0.9rem;
+    .pipeline-name {
+        color: #E6E9EF;
+        font-size: 0.88rem;
     }
 
 
-    .agent-status {
-
+    .pipeline-status {
         margin-left: auto;
-
-        color: #737D8D;
-
-        font-size: 0.78rem;
+        color: #737C8D;
+        font-size: 0.75rem;
     }
 
 
-    /* REPORT */
+    /* ---------- REPORT ---------- */
 
-    .report {
+    .report-header {
+        margin-top: 2.5rem;
+        margin-bottom: 1rem;
+    }
 
-        background:
-            rgba(255, 255, 255, 0.035);
 
-        border:
-            1px solid
-            rgba(255, 255, 255, 0.08);
-
-        border-radius: 24px;
-
+    .report-box {
+        background: #101219;
+        border: 1px solid #252A35;
+        border-radius: 22px;
         padding: 2rem;
-
-        line-height: 1.8;
-
-        margin-top: 1.5rem;
     }
 
 
-    /* BUTTON */
+    /* ---------- DOWNLOAD BUTTON ---------- */
 
-    div.stButton > button {
+    div.stDownloadButton > button {
+        border-radius: 13px;
+        background: #171A22;
+        color: #E9ECF2;
+        border: 1px solid #303541;
+    }
 
-        border-radius: 14px;
-
-        border:
-            1px solid
-            rgba(255, 255, 255, 0.12);
-
-        background:
-            rgba(255, 255, 255, 0.07);
-
+    div.stDownloadButton > button:hover {
+        border-color: #7568FF;
         color: white;
-
-        min-height: 48px;
-
-        transition:
-            all 0.2s ease;
     }
 
 
-    div.stButton > button:hover {
-
-        border-color:
-            rgba(137, 149, 255, 0.55);
-
-        background:
-            rgba(137, 149, 255, 0.12);
-
-        transform:
-            translateY(-1px);
-    }
-
-
-    textarea {
-
-        background:
-            rgba(255, 255, 255, 0.045)
-            !important;
-
-        border-radius:
-            16px
-            !important;
-    }
-
+    /* ---------- MOBILE ---------- */
 
     @media (max-width: 700px) {
 
-        .hero h1 {
-
-            font-size: 2.4rem;
+        .hero-title {
+            font-size: 2.6rem;
         }
+
+        .hero-subtitle {
+            font-size: 0.95rem;
+        }
+
     }
 
     </style>
@@ -360,84 +325,118 @@ st.markdown(
 )
 
 
-# ==========================================================
-# HERO
-# ==========================================================
+# ============================================================
+# BRAND
+# ============================================================
 
 st.markdown(
     """
-    <div class="hero">
-
-        <div class="eyebrow">
-            Multi-Agent Research Workspace
-        </div>
-
-        <h1>
-            Research AI
-        </h1>
-
-        <p>
-            Ask a question and let a team of specialized
-            AI agents research, analyze, verify and write.
-        </p>
-
+    <div class="brand">
+        <span class="brand-symbol">✦</span>
+        RESEARCH AI
     </div>
     """,
     unsafe_allow_html=True
 )
 
 
-# ==========================================================
-# AGENTS
-# ==========================================================
+# ============================================================
+# HERO
+# ============================================================
+
+st.markdown(
+    """
+    <div class="hero-title">
+        Turn a question<br>
+        into a research report.
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    """
+    <div class="hero-subtitle">
+        A team of specialized AI agents researches the web,
+        analyzes evidence, verifies important claims,
+        and produces a structured research report.
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# ============================================================
+# QUESTION
+# ============================================================
+
+st.markdown(
+    '<div class="section-label">Research Question</div>',
+    unsafe_allow_html=True
+)
+
+question = st.text_area(
+    "Research Question",
+    placeholder=(
+        "What would you like to research?\n\n"
+        "Example: How is artificial intelligence "
+        "changing education in 2026?"
+    ),
+    height=140,
+    label_visibility="collapsed"
+)
+
+
+start = st.button(
+    "Start Research  →",
+    use_container_width=True
+)
+
+
+# ============================================================
+# AGENT NAMES
+# ============================================================
 
 agent_names = [
-
     "Research Planner",
-
     "Web Researcher",
-
     "Source Analyst",
-
     "Fact Checker",
-
     "Report Writer"
 ]
 
 
-# ==========================================================
-# STATUS PLACEHOLDER
-# ==========================================================
+# ============================================================
+# STATUS
+# ============================================================
 
 status_box = st.empty()
 
 
-def show_status(
-    current_agent,
-    message
-):
+def show_status(current_agent, message):
 
-    current_index = agent_names.index(
-        current_agent
-    )
+    current_index = agent_names.index(current_agent)
 
     with status_box.container():
 
-        # Current agent
+        st.markdown(
+            '<div class="section-label">Agent Activity</div>',
+            unsafe_allow_html=True
+        )
 
         st.markdown(
             f"""
-            <div class="current-agent">
+            <div class="agent-card agent-current">
 
-                <div class="current-label">
-                    ● Current Agent
+                <div class="agent-label">
+                    ● Currently Working
                 </div>
 
-                <div class="current-name">
+                <div class="agent-title">
                     {current_agent}
                 </div>
 
-                <div class="current-description">
+                <div class="agent-description">
                     {message}
                 </div>
 
@@ -446,174 +445,102 @@ def show_status(
             unsafe_allow_html=True
         )
 
+        rows = ""
 
-        # Pipeline
-
-        st.markdown(
-            '<div class="glass-card">',
-            unsafe_allow_html=True
-        )
-
-
-        for index, agent in enumerate(
-            agent_names
-        ):
+        for index, agent in enumerate(agent_names):
 
             if index < current_index:
 
-                dot = "done"
-
+                dot_class = "dot-done"
                 status = "Completed"
 
             elif index == current_index:
 
-                dot = "working"
-
+                dot_class = "dot-working"
                 status = "Working"
 
             else:
 
-                dot = "waiting"
-
+                dot_class = "dot-waiting"
                 status = "Waiting"
 
+            rows += f"""
+            <div class="pipeline-row">
 
-            st.markdown(
-                f"""
-                <div class="agent-row">
+                <div class="dot {dot_class}"></div>
 
-                    <div class="agent-dot {dot}">
-                    </div>
-
-                    <div class="agent-name">
-                        {agent}
-                    </div>
-
-                    <div class="agent-status">
-                        {status}
-                    </div>
-
+                <div class="pipeline-name">
+                    {agent}
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
 
+                <div class="pipeline-status">
+                    {status}
+                </div>
+
+            </div>
+            """
 
         st.markdown(
-            '</div>',
+            f"""
+            <div class="pipeline">
+                {rows}
+            </div>
+            """,
             unsafe_allow_html=True
         )
 
 
-# ==========================================================
-# QUESTION INPUT
-# ==========================================================
-
-st.markdown(
-    '<div class="glass-card">',
-    unsafe_allow_html=True
-)
-
-
-question = st.text_area(
-
-    "Research Question",
-
-    placeholder=(
-        "Example: How is artificial intelligence "
-        "changing education in 2026?"
-    ),
-
-    height=130,
-
-    label_visibility="collapsed"
-)
-
-
-start = st.button(
-
-    "Start Research  →",
-
-    use_container_width=True
-)
-
-
-st.markdown(
-    '</div>',
-    unsafe_allow_html=True
-)
-
-
-# ==========================================================
-# START RESEARCH
-# ==========================================================
+# ============================================================
+# RESEARCH
+# ============================================================
 
 if start:
-
-    # ------------------------------------------------------
-    # Validate question
-    # ------------------------------------------------------
 
     if not question.strip():
 
         st.warning(
-            "Please enter a research question."
+            "Please enter a research question first."
         )
 
         st.stop()
 
 
-    # ------------------------------------------------------
-    # Get Groq key
-    # ------------------------------------------------------
+    # ========================================================
+    # API KEY
+    # ========================================================
 
     groq_key = st.secrets.get(
-
         "GROQ_API_KEY",
-
-        os.environ.get(
-            "GROQ_API_KEY"
-        )
+        os.environ.get("GROQ_API_KEY")
     )
-
 
     if not groq_key:
 
         st.error(
             "GROQ_API_KEY is missing. "
-            "Add it to Streamlit Secrets."
+            "Add it in Streamlit Cloud → Settings → Secrets."
         )
 
         st.stop()
 
-
-    os.environ[
-        "GROQ_API_KEY"
-    ] = groq_key
+    os.environ["GROQ_API_KEY"] = groq_key
 
 
-    # ======================================================
-    # AGENT 1 — PLANNER
-    # ======================================================
+    # ========================================================
+    # 1. PLANNER
+    # ========================================================
 
     show_status(
-
         "Research Planner",
-
         "Breaking your question into focused research areas."
     )
 
-
     planner = create_planner()
-
 
     planning_task = Task(
 
         description=f"""
-
-        Create a concise research plan.
-
-        Research question:
+        Create a focused research plan for:
 
         {question}
 
@@ -622,65 +549,46 @@ if start:
         1. Main research objectives
         2. Important subtopics
         3. Evidence that should be collected
-        4. Important questions the final report should answer
+        4. Questions the final report should answer
 
-        Keep the plan practical and focused.
-
+        Keep the plan concise and practical.
         """,
 
         expected_output=(
-            "A clear research plan containing "
+            "A structured research plan with "
             "objectives, subtopics and evidence requirements."
         ),
 
         agent=planner
     )
 
-
     planner_crew = Crew(
-
-        agents=[
-            planner
-        ],
-
-        tasks=[
-            planning_task
-        ],
-
+        agents=[planner],
+        tasks=[planning_task],
         process=Process.sequential,
-
         verbose=False
     )
 
-
     plan_result = planner_crew.kickoff()
 
-
-    plan_text = str(
-        plan_result
-    )
+    plan_text = str(plan_result)
 
 
-    # ======================================================
-    # AGENT 2 — WEB RESEARCHER
-    # ======================================================
+    # ========================================================
+    # 2. WEB RESEARCHER
+    # ========================================================
 
     show_status(
-
         "Web Researcher",
-
         "Searching current web sources and collecting evidence."
     )
 
-
     researcher = create_researcher()
-
 
     research_task = Task(
 
         description=f"""
-
-        Research this question:
+        Research the following question:
 
         {question}
 
@@ -688,20 +596,19 @@ if start:
 
         {plan_text}
 
-        You MUST use your Web Research Tool.
+        You MUST use the Web Research Tool.
 
-        Find relevant and reasonably reliable sources.
+        Find relevant and reliable sources.
 
-        For useful sources collect:
+        For each useful source collect:
 
-        - Source title
+        - Title
         - URL
         - Important evidence
         - Relevant facts
-        - Publication information when available
+        - Publication information if available
 
         Do not invent sources.
-
         """,
 
         expected_output=(
@@ -712,53 +619,33 @@ if start:
         agent=researcher
     )
 
-
     researcher_crew = Crew(
-
-        agents=[
-            researcher
-        ],
-
-        tasks=[
-            research_task
-        ],
-
+        agents=[researcher],
+        tasks=[research_task],
         process=Process.sequential,
-
         verbose=False
     )
 
+    research_result = researcher_crew.kickoff()
 
-    research_result = (
-        researcher_crew.kickoff()
-    )
-
-
-    research_text = str(
-        research_result
-    )
+    research_text = str(research_result)
 
 
-    # ======================================================
-    # AGENT 3 — ANALYST
-    # ======================================================
+    # ========================================================
+    # 3. ANALYST
+    # ========================================================
 
     show_status(
-
         "Source Analyst",
-
-        "Analyzing the collected evidence and identifying findings."
+        "Analyzing evidence, patterns and important findings."
     )
 
-
     analyst = create_analyst()
-
 
     analysis_task = Task(
 
         description=f"""
-
-        Analyze the research package.
+        Analyze the collected research.
 
         Original question:
 
@@ -779,7 +666,6 @@ if start:
         - Claims that require verification
 
         Do not invent evidence.
-
         """,
 
         expected_output=(
@@ -790,54 +676,32 @@ if start:
         agent=analyst
     )
 
-
     analyst_crew = Crew(
-
-        agents=[
-            analyst
-        ],
-
-        tasks=[
-            analysis_task
-        ],
-
+        agents=[analyst],
+        tasks=[analysis_task],
         process=Process.sequential,
-
         verbose=False
     )
 
+    analysis_result = analyst_crew.kickoff()
 
-    analysis_result = (
-        analyst_crew.kickoff()
-    )
-
-
-    analysis_text = str(
-        analysis_result
-    )
+    analysis_text = str(analysis_result)
 
 
-    # ======================================================
-    # AGENT 4 — FACT CHECKER
-    # ======================================================
+    # ========================================================
+    # 4. FACT CHECKER
+    # ========================================================
 
     show_status(
-
         "Fact Checker",
-
-        "Cross-checking important claims against web sources."
+        "Cross-checking important claims against independent sources."
     )
 
-
-    fact_checker = (
-        create_fact_checker()
-    )
-
+    fact_checker = create_fact_checker()
 
     fact_task = Task(
 
         description=f"""
-
         Fact-check the research.
 
         Original question:
@@ -852,7 +716,7 @@ if start:
 
         {analysis_text}
 
-        You MUST use your Web Research Tool.
+        You MUST use the Web Research Tool.
 
         Independently verify important claims.
 
@@ -863,12 +727,11 @@ if start:
         CONFLICTING
         NOT VERIFIED
 
-        Explain the reason briefly.
+        Explain each result briefly.
 
         Include source URLs where possible.
 
         Do not invent verification.
-
         """,
 
         expected_output=(
@@ -880,54 +743,32 @@ if start:
         agent=fact_checker
     )
 
-
     fact_crew = Crew(
-
-        agents=[
-            fact_checker
-        ],
-
-        tasks=[
-            fact_task
-        ],
-
+        agents=[fact_checker],
+        tasks=[fact_task],
         process=Process.sequential,
-
         verbose=False
     )
 
+    fact_result = fact_crew.kickoff()
 
-    fact_result = (
-        fact_crew.kickoff()
-    )
-
-
-    fact_text = str(
-        fact_result
-    )
+    fact_text = str(fact_result)
 
 
-    # ======================================================
-    # AGENT 5 — REPORT WRITER
-    # ======================================================
+    # ========================================================
+    # 5. REPORT WRITER
+    # ========================================================
 
     show_status(
-
         "Report Writer",
-
-        "Writing the final research report."
+        "Writing the final evidence-based research report."
     )
 
-
-    writer = (
-        create_report_writer()
-    )
-
+    writer = create_report_writer()
 
     writing_task = Task(
 
         description=f"""
-
         Write the final research report.
 
         Research question:
@@ -964,14 +805,13 @@ if start:
 
         ## Sources
 
-        Important rules:
+        Rules:
 
         - Do not invent facts.
         - Do not invent citations.
         - Use URLs provided by the research.
         - Clearly identify uncertain claims.
         - Keep the report professional and readable.
-
         """,
 
         expected_output=(
@@ -982,53 +822,43 @@ if start:
         agent=writer
     )
 
-
     writer_crew = Crew(
-
-        agents=[
-            writer
-        ],
-
-        tasks=[
-            writing_task
-        ],
-
+        agents=[writer],
+        tasks=[writing_task],
         process=Process.sequential,
-
         verbose=False
     )
 
+    final_result = writer_crew.kickoff()
 
-    final_result = (
-        writer_crew.kickoff()
-    )
-
-
-    final_report = str(
-        final_result
-    )
+    final_report = str(final_result)
 
 
-    # ======================================================
+    # ========================================================
     # COMPLETE
-    # ======================================================
+    # ========================================================
 
     with status_box.container():
 
         st.markdown(
+            '<div class="section-label">Research Complete</div>',
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
             """
-            <div class="current-agent">
+            <div class="agent-card">
 
-                <div class="current-label">
-                    ✓ Research Complete
+                <div class="agent-label">
+                    ✓ COMPLETED
                 </div>
 
-                <div class="current-name">
-                    All agents finished
+                <div class="agent-title">
+                    Your research is ready.
                 </div>
 
-                <div class="current-description">
-                    Your research report is ready.
+                <div class="agent-description">
+                    All five research agents have completed their work.
                 </div>
 
             </div>
@@ -1036,56 +866,61 @@ if start:
             unsafe_allow_html=True
         )
 
-
-        st.markdown(
-            '<div class="glass-card">',
-            unsafe_allow_html=True
-        )
-
+        rows = ""
 
         for agent in agent_names:
 
-            st.markdown(
-                f"""
-                <div class="agent-row">
+            rows += f"""
+            <div class="pipeline-row">
 
-                    <div class="agent-dot done">
-                    </div>
+                <div class="dot dot-done"></div>
 
-                    <div class="agent-name">
-                        {agent}
-                    </div>
-
-                    <div class="agent-status">
-                        Completed
-                    </div>
-
+                <div class="pipeline-name">
+                    {agent}
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
 
+                <div class="pipeline-status">
+                    Completed
+                </div>
+
+            </div>
+            """
 
         st.markdown(
-            '</div>',
+            f"""
+            <div class="pipeline">
+                {rows}
+            </div>
+            """,
             unsafe_allow_html=True
         )
 
 
-    # ======================================================
+    # ========================================================
     # REPORT
-    # ======================================================
+    # ========================================================
 
     st.markdown(
-        '<div class="report">',
+        '<div class="report-header">',
         unsafe_allow_html=True
     )
 
-
     st.markdown(
-        final_report
+        '<div class="section-label">Final Report</div>',
+        unsafe_allow_html=True
     )
 
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="report-box">',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(final_report)
 
     st.markdown(
         '</div>',
@@ -1093,19 +928,14 @@ if start:
     )
 
 
-    # ======================================================
+    # ========================================================
     # DOWNLOAD
-    # ======================================================
+    # ========================================================
 
     st.download_button(
-
-        label="Download Research Report",
-
+        "Download Research Report",
         data=final_report,
-
         file_name="research_report.md",
-
         mime="text/markdown",
-
         use_container_width=True
     )
