@@ -5,16 +5,23 @@ from llm_config import create_llm
 
 def create_analyst():
 
-    llm = create_llm(temperature=0.2)
-
     return Agent(
         role="Source Analyst",
-        goal="Analyze research and identify important evidence and findings.",
-        backstory=(
-            "You carefully examine research sources, "
-            "separate facts from opinions and organize evidence."
+
+        goal=(
+            "Analyze research findings and identify "
+            "the strongest evidence."
         ),
-        llm=llm,
+
+        backstory=(
+            "You examine research findings, separate "
+            "strong evidence from weak claims and "
+            "identify information requiring verification."
+        ),
+
+        llm=create_llm(temperature=0.1),
+
         verbose=False,
+
         allow_delegation=False
     )
